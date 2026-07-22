@@ -265,6 +265,21 @@
     </button>
   </nav>
 
+  <!-- Volunteer Research Consent Modal -->
+  <div id="consent-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-title">🔒 Volunteer Research Consent</div>
+      <div class="modal-body">
+        You are participating in an anonymized behavioral biometrics research study (BCS052 Data Analytics Project 3).
+        Only non-personal touch events, accelerometer, and gyroscope sensor readings will be recorded under your anonymized ID (<strong id="consent-v-id" style="color: #38bdf8;">V01</strong>). No personal identification or typed text content is saved.
+      </div>
+      <div class="modal-actions">
+        <button id="btn-consent-agree" class="btn btn-start">I Consent & Start</button>
+        <button id="btn-consent-cancel" class="btn" style="background: #475569; color: #ffffff;">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>

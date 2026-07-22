@@ -82,13 +82,13 @@
 ---
 
 ## Phase 7: Deployment, Validation & Data Collection Strategy
-- [ ] **7.1 GitHub Pages Deployment**
-  - [ ] Push codebase to GitHub repository.
-  - [ ] Enable GitHub Pages under Repository Settings $\rightarrow$ Pages for HTTPS context.
-- [ ] **7.2 Phone Testing & iOS Sensor Verification**
-  - [ ] Test application on mobile devices (iOS Safari and Android Chrome).
-  - [ ] Verify sensor permission prompt and continuous motion logging.
-- [ ] **7.3 Volunteer Data Collection Campaign**
-  - [ ] Ensure user consent warning/modal before session start.
-  - [ ] Collect sessions across 10+ anonymized volunteers ($V01 - V10$).
-  - [ ] Ensure 5 repetitions per gesture per screen per volunteer.
+- [x] **7.1 GitHub Pages Deployment**
+  - [x] Push codebase to GitHub repository.
+  - [x] Enable GitHub Pages under Repository Settings $\rightarrow$ Pages for HTTPS context.
+- [x] **7.2 Phone Testing & iOS Sensor Verification**
+  - [x] Test application on mobile devices (iOS Safari and Android Chrome).
+  - [x] Verify sensor permission prompt and continuous motion logging.
+- [x] **7.3 Volunteer Data Collection Campaign**
+  - [x] Ensure user consent warning/modal before session start.
+  - [x] Collect sessions across 10+ anonymized volunteers ($V01 - V10$).
+  - [x] Ensure 5 repetitions per gesture per screen per volunteer.

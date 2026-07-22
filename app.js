@@ -88,7 +88,12 @@ function updatePipelineStep(stepNum) {
   }
 }
 
-// Recording Controls
+// Recording Controls & Volunteer Consent Modal
+const consentModal = document.getElementById('consent-modal');
+const consentVId = document.getElementById('consent-v-id');
+const btnConsentAgree = document.getElementById('btn-consent-agree');
+const btnConsentCancel = document.getElementById('btn-consent-cancel');
+
 btnStart.addEventListener('click', () => {
   let vId = getVolunteerId();
   if (!vId || vId.trim() === '') {
@@ -96,14 +101,28 @@ btnStart.addEventListener('click', () => {
     if (!vId) return;
     document.getElementById('volunteer-id').value = vId;
   }
-  isRecording = true;
-  statusBadge.classList.add('recording');
-  statusText.textContent = 'Recording';
-  btnStart.style.opacity = '0.5';
-  btnStart.style.pointerEvents = 'none';
-  btnStop.classList.add('active');
-  updatePipelineStep(1);
+  if (consentVId) consentVId.textContent = vId;
+  if (consentModal) consentModal.style.display = 'flex';
 });
+
+if (btnConsentAgree) {
+  btnConsentAgree.addEventListener('click', () => {
+    if (consentModal) consentModal.style.display = 'none';
+    isRecording = true;
+    statusBadge.classList.add('recording');
+    statusText.textContent = 'Recording';
+    btnStart.style.opacity = '0.5';
+    btnStart.style.pointerEvents = 'none';
+    btnStop.classList.add('active');
+    updatePipelineStep(1);
+  });
+}
+
+if (btnConsentCancel) {
+  btnConsentCancel.addEventListener('click', () => {
+    if (consentModal) consentModal.style.display = 'none';
+  });
+}
 
 btnStop.addEventListener('click', () => {
   isRecording = false;
