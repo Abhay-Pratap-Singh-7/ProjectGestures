@@ -8,10 +8,15 @@
   user-select: none;
 }
 
-body {
+html, body {
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  position: fixed;
+  top: 0;
+  left: 0;
   background-color: #0f172a;
   color: #f8fafc;
-  height: 100vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -26,6 +31,7 @@ header {
   flex-direction: column;
   gap: 10px;
   z-index: 10;
+  flex-shrink: 0;
 }
 
 .top-bar {
@@ -139,6 +145,7 @@ header {
 /* Main Screen Viewport */
 main {
   flex: 1;
+  min-height: 0;
   position: relative;
   overflow: hidden;
 }
@@ -364,8 +371,11 @@ nav {
   background-color: #1e293b;
   border-top: 1px solid #334155;
   display: flex;
-  height: 64px;
-  z-index: 10;
+  height: 60px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-sizing: content-box;
+  flex-shrink: 0;
+  z-index: 100;
 }
 
 .nav-item {

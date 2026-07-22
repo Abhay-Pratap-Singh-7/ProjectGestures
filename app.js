@@ -7,11 +7,12 @@
 let isRecording = false;
 let currentScreen = 'feed';
 let telemetryData = [];
+let isHardwareSensorDetected = false;
 
 let currentMotion = {
   accx: 0,
   accy: 0,
-  accz: 0,
+  accz: 9.81,
   rotAlpha: 0,
   rotBeta: 0,
   rotGamma: 0
@@ -171,10 +172,11 @@ function recordTelemetry(eventType, x, y, fingerCount, gestureLabel) {
 function initSensors() {
   window.addEventListener('devicemotion', (e) => {
     const acc = e.accelerationIncludingGravity || e.acceleration;
-    if (acc) {
-      currentMotion.accx = acc.x ? parseFloat(acc.x.toFixed(4)) : 0;
-      currentMotion.accy = acc.y ? parseFloat(acc.y.toFixed(4)) : 0;
-      currentMotion.accz = acc.z ? parseFloat(acc.z.toFixed(4)) : 0;
+    if (acc && typeof acc.x === 'number' && acc.x !== null) {
+      isHardwareSensorDetected = true;
+      currentMotion.accx = parseFloat(acc.x.toFixed(4));
+      currentMotion.accy = acc.y !== null ? parseFloat(acc.y.toFixed(4)) : 0;
+      currentMotion.accz = acc.z !== null ? parseFloat(acc.z.toFixed(4)) : 9.81;
       updateTelemetryUI();
     }
 
@@ -184,10 +186,13 @@ function initSensors() {
   }, true);
 
   window.addEventListener('deviceorientation', (e) => {
-    currentMotion.rotAlpha = e.alpha !== null ? parseFloat(e.alpha.toFixed(4)) : 0;
-    currentMotion.rotBeta = e.beta !== null ? parseFloat(e.beta.toFixed(4)) : 0;
-    currentMotion.rotGamma = e.gamma !== null ? parseFloat(e.gamma.toFixed(4)) : 0;
-    updateTelemetryUI();
+    if (e.alpha !== null && typeof e.alpha === 'number') {
+      isHardwareSensorDetected = true;
+      currentMotion.rotAlpha = parseFloat(e.alpha.toFixed(4));
+      currentMotion.rotBeta = e.beta !== null ? parseFloat(e.beta.toFixed(4)) : 0;
+      currentMotion.rotGamma = e.gamma !== null ? parseFloat(e.gamma.toFixed(4)) : 0;
+      updateTelemetryUI();
+    }
   }, true);
 
   if (btnSensors) {
@@ -225,25 +230,40 @@ if (btnSensors) {
   });
 }
 
-// Desktop Mouse Motion Fallback Simulation
+// Desktop Mouse Motion Fallback Simulation (only if hardware sensors are absent)
 let lastMouseX = null, lastMouseY = null, lastMouseTime = null;
 document.addEventListener('mousemove', (e) => {
+  if (isHardwareSensorDetected) return;
+
   const now = Date.now();
   if (lastMouseTime && now > lastMouseTime) {
     const dt = (now - lastMouseTime) / 1000;
     const vx = (e.clientX - lastMouseX) / dt;
     const vy = (e.clientY - lastMouseY) / dt;
-    if (!currentMotion.accx || currentMotion.accx === 0) {
-      currentMotion.accx = parseFloat((vx / 120).toFixed(4));
-      currentMotion.accy = parseFloat((vy / 120).toFixed(4));
-      currentMotion.accz = 9.81;
-      updateTelemetryUI();
-    }
+
+    currentMotion.accx = parseFloat((vx / 100).toFixed(4));
+    currentMotion.accy = parseFloat((vy / 100).toFixed(4));
+    currentMotion.accz = parseFloat((9.81 + (Math.sin(now / 200) * 0.5)).toFixed(4));
+
+    // Simulated orientation tilt
+    currentMotion.rotAlpha = parseFloat(((e.clientX / window.innerWidth) * 360).toFixed(2));
+    currentMotion.rotBeta = parseFloat((((e.clientY / window.innerHeight) * 180) - 90).toFixed(2));
+    currentMotion.rotGamma = parseFloat((((e.clientX / window.innerWidth) * 180) - 90).toFixed(2));
+
+    updateTelemetryUI();
   }
   lastMouseX = e.clientX;
   lastMouseY = e.clientY;
   lastMouseTime = now;
 });
+
+// Continuous UI refresh loop for smooth live charts
+function animationLoop() {
+  if (currentScreen === 'analytics') {
+    updateTelemetryUI();
+  }
+  requestAnimationFrame(animationLoop);
+}
 
 // Feed Scroll Gesture Event Detection
 const feedScreenEl = document.getElementById('screen-feed');
@@ -504,3 +524,6 @@ function drawGestureBarChart() {
     ctx.fillText(labels[i].split(' ')[0], x + barWidth / 2, height - 6);
   }
 }
+
+// Start continuous animation loop
+requestAnimationFrame(animationLoop);
