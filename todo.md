@@ -57,14 +57,14 @@
 ---
 
 ## Phase 5: Data Visualization & Pipeline Status (P5 - Visualise)
-- [ ] **5.1 Live Acceleration Line Chart**
-  - [ ] Integrate lightweight charting solution (e.g., Chart.js or Canvas API).
-  - [ ] Render live line chart showing acceleration magnitude ($\sqrt{accx^2 + accy^2 + accz^2}$) for the active gesture.
-- [ ] **5.2 Gesture Distribution Bar Chart**
-  - [ ] Render bar chart showing current session count breakdown by gesture type.
-- [ ] **5.3 5-Stage Data Pipeline Indicator**
-  - [ ] Create interactive visual status strip: `Capture` $\rightarrow$ `Clean` $\rightarrow$ `Analyse` $\rightarrow$ `Visualise` $\rightarrow$ `Export`.
-  - [ ] Update active step highlight dynamically based on user interaction flow.
+- [x] **5.1 Live Acceleration Line Chart**
+  - [x] Integrate lightweight charting solution (e.g., Chart.js or Canvas API).
+  - [x] Render live line chart showing acceleration magnitude ($\sqrt{accx^2 + accy^2 + accz^2}$) for the active gesture.
+- [x] **5.2 Gesture Distribution Bar Chart**
+  - [x] Render bar chart showing current session count breakdown by gesture type.
+- [x] **5.3 5-Stage Data Pipeline Indicator**
+  - [x] Create interactive visual status strip: `Capture` $\rightarrow$ `Clean` $\rightarrow$ `Analyse` $\rightarrow$ `Visualise` $\rightarrow$ `Export`.
+  - [x] Update active step highlight dynamically based on user interaction flow.
 
 ---
 
