@@ -18,16 +18,16 @@
 ---
 
 ## Phase 2: Touch Telemetry Capture System (P2 - Touch)
-- [ ] **2.1 Touch Event Listeners**
-  - [ ] Attach `touchstart`, `touchmove`, and `touchend` event listeners to interactive areas.
-  - [ ] Prevent default unwanted gesture behaviors where appropriate to capture raw telemetry smoothly.
-- [ ] **2.2 Touch Data Collection**
-  - [ ] Extract pointer coordinates (`x`, `y`).
-  - [ ] Count active touch points (`finger_count`).
-  - [ ] Record high-precision timestamps (`performance.now()` / `Date.now()`).
-- [ ] **2.3 State Management & Tagging**
-  - [ ] Store telemetry points into a primary data array during active recording.
-  - [ ] Tag each recorded event with the active screen (`feed`, `zoom`, `type`).
+- [x] **2.1 Touch Event Listeners**
+  - [x] Attach `touchstart`, `touchmove`, and `touchend` event listeners to interactive areas.
+  - [x] Prevent default unwanted gesture behaviors where appropriate to capture raw telemetry smoothly.
+- [x] **2.2 Touch Data Collection**
+  - [x] Extract pointer coordinates (`x`, `y`).
+  - [x] Count active touch points (`finger_count`).
+  - [x] Record high-precision timestamps (`performance.now()` / `Date.now()`).
+- [x] **2.3 State Management & Tagging**
+  - [x] Store telemetry points into a primary data array during active recording.
+  - [x] Tag each recorded event with the active screen (`feed`, `zoom`, `type`).
 
 ---
 

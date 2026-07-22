@@ -398,6 +398,7 @@
     // State Variables
     let isRecording = false;
     let currentScreen = 'feed';
+    let telemetryData = [];
 
     // DOM Elements
     const btnStart = document.getElementById('btn-start');
@@ -446,6 +447,82 @@
       btnStart.style.pointerEvents = 'auto';
       btnStop.classList.remove('active');
     });
+
+    // Touch Event Handling & Telemetry Data Collection (Phase 2)
+    function handleTouchEvent(e) {
+      if (!isRecording) return;
+
+      const timestamp = Date.now();
+      const eventType = e.type;
+      const fingerCount = e.touches ? e.touches.length : 0;
+
+      // Collect telemetry for all active touch points or fallback to primary touch
+      const touches = e.touches.length > 0 ? e.touches : e.changedTouches;
+
+      for (let i = 0; i < touches.length; i++) {
+        const touch = touches[i];
+        const record = {
+          timestamp: timestamp,
+          screen: currentScreen,
+          event_type: eventType,
+          x: Math.round(touch.clientX),
+          y: Math.round(touch.clientY),
+          finger_count: fingerCount,
+          accx: null,
+          accy: null,
+          accz: null,
+          rotAlpha: null,
+          rotBeta: null,
+          rotGamma: null,
+          gesture_label: null,
+          volunteer_id: null
+        };
+        telemetryData.push(record);
+      }
+    }
+
+    // Attach Touch Listeners
+    ['touchstart', 'touchmove', 'touchend'].forEach(eventName => {
+      document.addEventListener(eventName, handleTouchEvent, { passive: true });
+    });
+
+    // Pinch-to-zoom interactive visual effect on Zoom Screen
+    const zoomTarget = document.getElementById('zoom-target');
+    let initialPinchDistance = null;
+    let currentScale = 1;
+
+    document.getElementById('screen-zoom').addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        initialPinchDistance = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+      }
+    }, { passive: true });
+
+    document.getElementById('screen-zoom').addEventListener('touchmove', (e) => {
+      if (e.touches.length === 2 && initialPinchDistance) {
+        const currentDistance = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        const factor = currentDistance / initialPinchDistance;
+        const newScale = Math.min(Math.max(currentScale * factor, 0.5), 3);
+        zoomTarget.style.transform = `scale(${newScale})`;
+      }
+    }, { passive: true });
+
+    document.getElementById('screen-zoom').addEventListener('touchend', (e) => {
+      if (e.touches.length < 2) {
+        initialPinchDistance = null;
+        // Extract matrix scale if needed
+        const transform = window.getComputedStyle(zoomTarget).getPropertyValue('transform');
+        if (transform !== 'none') {
+          const values = transform.split('(')[1].split(')')[0].split(',');
+          currentScale = parseFloat(values[0]) || 1;
+        }
+      }
+    }, { passive: true });
   </script>
 </body>
 </html>
