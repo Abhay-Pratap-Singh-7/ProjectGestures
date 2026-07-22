@@ -1,7 +1,8 @@
 /**
  * ✋ Hand-Pattern Analytics Application Logic
  * Telemetry Stream & Heuristic Auto-Labeling Engine
- * Single-Stroke Gesture Counting (Touch Drag Start -> Lift)
+ * Event Types: scroll-start/scrolling/scroll-end, zoom-in-start/zooming-in/zoom-in-end, input-start/inputting/input-end
+ * Finger Counts: 1 for scroll & input, 2 for zoom
  */
 
 // Application Core State
@@ -40,6 +41,7 @@ let pinchStartDist = null;
 let pinchLastDist = null;
 let wheelZoomTimer = null;
 let wheelDeltaSum = 0;
+let isWheelZooming = false;
 
 // DOM Elements
 const btnSensors = document.getElementById('btn-sensors');
@@ -178,13 +180,17 @@ function updateRecordCountUI() {
 // Central Telemetry Record Append Function (Schema Enforced)
 function recordTelemetry(eventType, x, y, fingerCount, gestureLabel) {
   if (!isRecording) return;
+
+  // Filter out raw 'motion' events
+  if (eventType === 'motion') return;
+
   telemetryData.push({
     timestamp: Date.now(),
     screen: currentScreen,
     event_type: eventType,
-    x: x !== null ? x : '',
-    y: y !== null ? y : '',
-    finger_count: fingerCount !== null ? fingerCount : '',
+    x: x !== null && x !== undefined ? x : '',
+    y: y !== null && y !== undefined ? y : '',
+    finger_count: fingerCount !== null && fingerCount !== undefined ? fingerCount : '',
     accx: currentMotion.accx !== null ? currentMotion.accx : '',
     accy: currentMotion.accy !== null ? currentMotion.accy : '',
     accz: currentMotion.accz !== null ? currentMotion.accz : '',
@@ -258,10 +264,6 @@ function initSensors() {
       currentMotion.accz = acc.z !== null ? parseFloat(acc.z.toFixed(4)) : 9.81;
       updateTelemetryUI();
     }
-
-    if (isRecording) {
-      recordTelemetry('motion', null, null, null, null);
-    }
   }, true);
 
   window.addEventListener('deviceorientation', (e) => {
@@ -324,7 +326,6 @@ document.addEventListener('mousemove', (e) => {
     currentMotion.accy = parseFloat((vy / 100).toFixed(4));
     currentMotion.accz = parseFloat((9.81 + (Math.sin(now / 200) * 0.5)).toFixed(4));
 
-    // Simulated orientation tilt
     currentMotion.rotAlpha = parseFloat(((e.clientX / window.innerWidth) * 360).toFixed(2));
     currentMotion.rotBeta = parseFloat((((e.clientY / window.innerHeight) * 180) - 90).toFixed(2));
     currentMotion.rotGamma = parseFloat((((e.clientX / window.innerWidth) * 180) - 90).toFixed(2));
@@ -344,32 +345,39 @@ function animationLoop() {
   requestAnimationFrame(animationLoop);
 }
 
-// Feed Scroll Event Debounce (Container/Wheel Scrolling)
+// Feed Scroll Event Handling (Scroll container / wheel)
 const feedScreenEl = document.getElementById('screen-feed');
 if (feedScreenEl) {
   feedScreenEl.addEventListener('scroll', () => {
     if (!isRecording) return;
     if (initialScrollTop === null) {
       initialScrollTop = feedScreenEl.scrollTop;
+      recordTelemetry('scroll-start', null, null, 1, 'scroll_down');
+    } else {
+      const delta = feedScreenEl.scrollTop - initialScrollTop;
+      const label = delta > 0 ? 'scroll_down' : 'scroll_up';
+      recordTelemetry('scrolling', null, null, 1, label);
     }
     clearTimeout(feedScrollTimer);
     feedScrollTimer = setTimeout(() => {
       const delta = feedScreenEl.scrollTop - initialScrollTop;
+      let label = 'scroll_down';
       if (delta > 15) {
+        label = 'scroll_down';
         gestureCounts.scroll_down++;
-        recordTelemetry('scroll_end', null, null, 1, 'scroll_down');
         updateStatCounters();
       } else if (delta < -15) {
+        label = 'scroll_up';
         gestureCounts.scroll_up++;
-        recordTelemetry('scroll_end', null, null, 1, 'scroll_up');
         updateStatCounters();
       }
+      recordTelemetry('scroll-end', null, null, 1, label);
       initialScrollTop = null;
     }, 250);
   }, { passive: true });
 }
 
-// Zoom Mouse Wheel Event Debounce (1 stroke per wheel gesture)
+// Zoom Mouse Wheel Event Handling
 const zoomScreenEl = document.getElementById('screen-zoom');
 const zoomTarget = document.getElementById('zoom-target');
 let currentScale = 1;
@@ -378,9 +386,19 @@ if (zoomScreenEl) {
   zoomScreenEl.addEventListener('wheel', (e) => {
     if (!isRecording) return;
     e.preventDefault();
-    wheelDeltaSum += e.deltaY;
 
-    const factor = e.deltaY < 0 ? 1.05 : 0.95;
+    const isZoomIn = e.deltaY < 0;
+    const currentLabel = isZoomIn ? 'zoom_in' : 'zoom_out';
+
+    if (!isWheelZooming) {
+      isWheelZooming = true;
+      recordTelemetry(isZoomIn ? 'zoom-in-start' : 'zoom-out-start', Math.round(e.clientX), Math.round(e.clientY), 2, currentLabel);
+    } else {
+      recordTelemetry(isZoomIn ? 'zooming-in' : 'zooming-out', Math.round(e.clientX), Math.round(e.clientY), 2, currentLabel);
+    }
+
+    wheelDeltaSum += e.deltaY;
+    const factor = isZoomIn ? 1.05 : 0.95;
     currentScale = Math.min(Math.max(currentScale * factor, 0.5), 3);
     if (zoomTarget) zoomTarget.style.transform = `scale(${currentScale})`;
 
@@ -388,106 +406,160 @@ if (zoomScreenEl) {
     wheelZoomTimer = setTimeout(() => {
       if (wheelDeltaSum < -10) {
         gestureCounts.zoom_in++;
-        recordTelemetry('zoom_end', Math.round(e.clientX), Math.round(e.clientY), 1, 'zoom_in');
+        recordTelemetry('zoom-in-end', Math.round(e.clientX), Math.round(e.clientY), 2, 'zoom_in');
         updateStatCounters();
       } else if (wheelDeltaSum > 10) {
         gestureCounts.zoom_out++;
-        recordTelemetry('zoom_end', Math.round(e.clientX), Math.round(e.clientY), 1, 'zoom_out');
+        recordTelemetry('zoom-out-end', Math.round(e.clientX), Math.round(e.clientY), 2, 'zoom_out');
         updateStatCounters();
       }
       wheelDeltaSum = 0;
+      isWheelZooming = false;
     }, 300);
   }, { passive: false });
 }
 
-// Touch Drag Event Handling (1 Gesture Count per Touch Start -> Drag -> Finger Lift)
+// Touch Event Handling (Scroll, Zoom, Input mapped event_type and finger_count)
 function handleTouchEvent(e) {
   if (!isRecording) return;
 
   const eventType = e.type;
-  const fingerCount = e.touches ? e.touches.length : 0;
-  let detectedLabel = null;
+  const touchList = e.touches.length > 0 ? e.touches : e.changedTouches;
+  const touch = touchList[0];
+  const touchX = touch ? Math.round(touch.clientX) : null;
+  const touchY = touch ? Math.round(touch.clientY) : null;
 
+  // 1. FEED SCREEN (Scroll)
   if (currentScreen === 'feed') {
     if (eventType === 'touchstart' && e.touches.length > 0) {
       feedTouchStartY = e.touches[0].clientY;
       feedTouchLastY = e.touches[0].clientY;
+      recordTelemetry('scroll-start', touchX, touchY, 1, 'scroll_down');
     } else if (eventType === 'touchmove' && e.touches.length > 0) {
       feedTouchLastY = e.touches[0].clientY;
       if (feedTouchStartY !== null) {
         const moveDelta = feedTouchLastY - feedTouchStartY;
-        detectedLabel = moveDelta < 0 ? 'scroll_down' : 'scroll_up';
+        const currentLabel = moveDelta < 0 ? 'scroll_down' : 'scroll_up';
+        recordTelemetry('scrolling', touchX, touchY, 1, currentLabel);
       }
     } else if (eventType === 'touchend') {
+      let finalLabel = 'scroll_down';
       if (feedTouchStartY !== null && feedTouchLastY !== null) {
         const totalDelta = feedTouchLastY - feedTouchStartY;
         if (totalDelta < -15) {
+          finalLabel = 'scroll_down';
           gestureCounts.scroll_down++;
-          detectedLabel = 'scroll_down';
           updateStatCounters();
         } else if (totalDelta > 15) {
+          finalLabel = 'scroll_up';
           gestureCounts.scroll_up++;
-          detectedLabel = 'scroll_up';
           updateStatCounters();
         }
       }
+      recordTelemetry('scroll-end', touchX, touchY, 1, finalLabel);
       feedTouchStartY = null;
       feedTouchLastY = null;
     }
-  } else if (currentScreen === 'zoom') {
+  }
+
+  // 2. ZOOM SCREEN (Zoom In / Zoom Out)
+  else if (currentScreen === 'zoom') {
     if (eventType === 'touchstart' && e.touches.length === 2) {
       pinchStartDist = Math.hypot(
         e.touches[0].clientX - e.touches[1].clientX,
         e.touches[0].clientY - e.touches[1].clientY
       );
       pinchLastDist = pinchStartDist;
+      recordTelemetry('zoom-in-start', touchX, touchY, 2, 'zoom_in');
     } else if (eventType === 'touchmove' && e.touches.length === 2) {
       pinchLastDist = Math.hypot(
         e.touches[0].clientX - e.touches[1].clientX,
         e.touches[0].clientY - e.touches[1].clientY
       );
       if (pinchStartDist !== null) {
-        detectedLabel = (pinchLastDist - pinchStartDist > 0) ? 'zoom_in' : 'zoom_out';
+        const isExpanding = pinchLastDist - pinchStartDist > 0;
+        const mappedType = isExpanding ? 'zooming-in' : 'zooming-out';
+        const label = isExpanding ? 'zoom_in' : 'zoom_out';
+        recordTelemetry(mappedType, touchX, touchY, 2, label);
       }
     } else if (eventType === 'touchend') {
       if (pinchStartDist !== null && pinchLastDist !== null) {
         const distDelta = pinchLastDist - pinchStartDist;
         if (distDelta > 15) {
           gestureCounts.zoom_in++;
-          detectedLabel = 'zoom_in';
+          recordTelemetry('zoom-in-end', touchX, touchY, 2, 'zoom_in');
           updateStatCounters();
         } else if (distDelta < -15) {
           gestureCounts.zoom_out++;
-          detectedLabel = 'zoom_out';
+          recordTelemetry('zoom-out-end', touchX, touchY, 2, 'zoom_out');
           updateStatCounters();
         }
       }
       pinchStartDist = null;
       pinchLastDist = null;
     }
-  } else if (currentScreen === 'type') {
-    detectedLabel = 'typing';
-    if (eventType === 'touchstart') {
-      gestureCounts.typing++;
-      updateStatCounters();
-    }
   }
 
-  const touches = e.touches.length > 0 ? e.touches : e.changedTouches;
-  for (let i = 0; i < touches.length; i++) {
-    const touch = touches[i];
-    recordTelemetry(eventType, Math.round(touch.clientX), Math.round(touch.clientY), fingerCount, detectedLabel);
+// 3. TYPE SCREEN (Input per-letter chunking)
+  else if (currentScreen === 'type') {
+    // Touch logging inside type screen
+    if (eventType === 'touchstart') {
+      recordTelemetry('input-start', touchX, touchY, 1, 'typing');
+    } else if (eventType === 'touchmove') {
+      recordTelemetry('inputting', touchX, touchY, 1, 'typing');
+    } else if (eventType === 'touchend') {
+      recordTelemetry('input-end', touchX, touchY, 1, 'typing');
+    }
   }
 }
 
-// Typing Input Event Listener
+// Typing Input Field Event Listeners (Every letter input creates a separate input-start, inputting, input-end chunk)
 const typingInput = document.getElementById('typing-input');
+let isLetterChunkActive = false;
+
 if (typingInput) {
-  typingInput.addEventListener('input', () => {
-    if (isRecording) {
-      gestureCounts.typing++;
-      updateStatCounters();
-      recordTelemetry('input', null, null, 1, 'typing');
+  typingInput.addEventListener('keydown', (e) => {
+    if (!isRecording) return;
+    if (!isLetterChunkActive) {
+      isLetterChunkActive = true;
+      const rect = typingInput.getBoundingClientRect();
+      const x = Math.round(rect.left + rect.width / 2);
+      const y = Math.round(rect.top + rect.height / 2);
+      recordTelemetry('input-start', x, y, 1, 'typing');
+    }
+  });
+
+  typingInput.addEventListener('input', (e) => {
+    if (!isRecording) return;
+    const rect = typingInput.getBoundingClientRect();
+    const x = Math.round(rect.left + rect.width / 2);
+    const y = Math.round(rect.top + rect.height / 2);
+
+    if (!isLetterChunkActive) {
+      recordTelemetry('input-start', x, y, 1, 'typing');
+    }
+
+    gestureCounts.typing++;
+    updateStatCounters();
+    recordTelemetry('inputting', x, y, 1, 'typing');
+
+    // Auto-complete chunk end for virtual keyboards
+    setTimeout(() => {
+      if (isLetterChunkActive) {
+        recordTelemetry('input-end', x, y, 1, 'typing');
+        isLetterChunkActive = false;
+      }
+    }, 40);
+  });
+
+  typingInput.addEventListener('keyup', (e) => {
+    if (!isRecording) return;
+    if (isLetterChunkActive) {
+      const rect = typingInput.getBoundingClientRect();
+      const x = Math.round(rect.left + rect.width / 2);
+      const y = Math.round(rect.top + rect.height / 2);
+      recordTelemetry('input-end', x, y, 1, 'typing');
+      isLetterChunkActive = false;
     }
   });
 }
