@@ -46,13 +46,13 @@
 ---
 
 ## Phase 4: Heuristic Auto-Labeling Engine & Live Analytics Stats (P4 - Auto-Label & Live Stats)
-- [ ] **4.1 Auto-Labeling Heuristics**
-  - [ ] **Feed Screen**: Detect swipe vector direction to auto-label `scroll_up` vs `scroll_down`.
-  - [ ] **Zoom Screen**: Track 2-finger Euclidean distance delta over time to auto-label `zoom_in` vs `zoom_out`.
-  - [ ] **Type Screen**: Track tap events inside the input box to auto-label `typing`.
-- [ ] **4.2 Real-time Counter Stats**
-  - [ ] Calculate live gesture counts for each label (`scroll_up`, `scroll_down`, `zoom_in`, `zoom_out`, `typing`).
-  - [ ] Display live statistics counters in the top control header/dashboard.
+- [x] **4.1 Auto-Labeling Heuristics**
+  - [x] **Feed Screen**: Detect swipe vector direction to auto-label `scroll_up` vs `scroll_down`.
+  - [x] **Zoom Screen**: Track 2-finger Euclidean distance delta over time to auto-label `zoom_in` vs `zoom_out`.
+  - [x] **Type Screen**: Track tap events inside the input box to auto-label `typing`.
+- [x] **4.2 Real-time Counter Stats**
+  - [x] Calculate live gesture counts for each label (`scroll_up`, `scroll_down`, `zoom_in`, `zoom_out`, `typing`).
+  - [x] Display live statistics counters in the top control header/dashboard.
 
 ---
 
