@@ -364,10 +364,52 @@ function animationLoop() {
   requestAnimationFrame(animationLoop);
 }
 
-// Feed Scroll Event Handling (Scroll container / wheel)
+// Infinite Color Reel Generator for Feed Screen
+let reelCardIndex = 1;
+const reelTopics = [
+  { icon: '📱', title: 'Behavioral Biometrics', text: 'Scroll naturally through this reel. Micro-tilts and flick velocity are logged.' },
+  { icon: '🌊', title: 'Sensor Streaming', text: 'Accelerometer and gyroscope capture hand orientation changes in real time.' },
+  { icon: '📊', title: 'Motion Signatures', text: 'Every user has a unique hold posture and swipe force signature.' },
+  { icon: '⚡', title: 'Velocity & Pressure', text: 'Fast swiping produces sharp acceleration peaks compared to slow scrolling.' },
+  { icon: '🚀', title: 'Analytics Pipeline', text: 'Every scroll gesture is auto-classified and sent to the analytics engine.' },
+  { icon: '🔬', title: 'Research Context', text: 'Biometrics track continuous physical motion patterns across interactions.' }
+];
+
+function generateRandomGradient() {
+  const h1 = Math.floor(Math.random() * 360);
+  const h2 = (h1 + 40 + Math.floor(Math.random() * 60)) % 360;
+  return `linear-gradient(135deg, hsl(${h1}, 75%, 22%), hsl(${h2}, 85%, 12%))`;
+}
+
+function createReelCard() {
+  const card = document.createElement('div');
+  card.className = 'reel-card';
+  card.style.background = generateRandomGradient();
+
+  const topic = reelTopics[(reelCardIndex - 1) % reelTopics.length];
+  card.innerHTML = `
+    <div class="reel-badge">Reel #${reelCardIndex}</div>
+    <div class="reel-title">${topic.icon} ${topic.title}</div>
+    <div class="reel-body">${topic.text}</div>
+  `;
+  reelCardIndex++;
+  return card;
+}
+
 const feedScreenEl = document.getElementById('screen-feed');
 if (feedScreenEl) {
+  for (let i = 0; i < 6; i++) {
+    feedScreenEl.appendChild(createReelCard());
+  }
+
   feedScreenEl.addEventListener('scroll', () => {
+    // Infinite Scroll append
+    if (feedScreenEl.scrollTop + feedScreenEl.clientHeight >= feedScreenEl.scrollHeight - 300) {
+      for (let i = 0; i < 3; i++) {
+        feedScreenEl.appendChild(createReelCard());
+      }
+    }
+
     if (!isRecording) return;
     if (initialScrollTop === null) {
       initialScrollTop = feedScreenEl.scrollTop;
