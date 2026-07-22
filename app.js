@@ -1,6 +1,7 @@
 /**
  * ✋ Hand-Pattern Analytics Application Logic
  * Telemetry Stream & Heuristic Auto-Labeling Engine
+ * Single-Stroke Gesture Counting (Touch Drag Start -> Lift)
  */
 
 // Application Core State
@@ -29,9 +30,16 @@ const gestureCounts = {
 let accHistory = [];
 const MAX_ACC_HISTORY = 50;
 
-let lastFeedY = null;
-let lastFeedScrollTop = 0;
-let lastPinchDist = null;
+// Gesture Stroke Tracking Variables
+let feedTouchStartY = null;
+let feedTouchLastY = null;
+let feedScrollTimer = null;
+let initialScrollTop = null;
+
+let pinchStartDist = null;
+let pinchLastDist = null;
+let wheelZoomTimer = null;
+let wheelDeltaSum = 0;
 
 // DOM Elements
 const btnSensors = document.getElementById('btn-sensors');
@@ -80,6 +88,12 @@ function updatePipelineStep(stepNum) {
 
 // Recording Controls
 btnStart.addEventListener('click', () => {
+  let vId = getVolunteerId();
+  if (!vId || vId.trim() === '') {
+    vId = prompt('Enter Anonymized Volunteer ID (e.g. V01):', 'V01');
+    if (!vId) return;
+    document.getElementById('volunteer-id').value = vId;
+  }
   isRecording = true;
   statusBadge.classList.add('recording');
   statusText.textContent = 'Recording';
@@ -147,25 +161,90 @@ function updateTelemetryUI() {
   }
 }
 
-// Central Telemetry Record Append Function
+// Volunteer ID & Record Count Helpers
+function getVolunteerId() {
+  const inputEl = document.getElementById('volunteer-id');
+  if (inputEl && inputEl.value.trim() !== '') {
+    return inputEl.value.trim();
+  }
+  return 'V01';
+}
+
+function updateRecordCountUI() {
+  const el = document.getElementById('export-record-count');
+  if (el) el.textContent = `${telemetryData.length} Records`;
+}
+
+// Central Telemetry Record Append Function (Schema Enforced)
 function recordTelemetry(eventType, x, y, fingerCount, gestureLabel) {
   if (!isRecording) return;
   telemetryData.push({
     timestamp: Date.now(),
     screen: currentScreen,
     event_type: eventType,
-    x: x,
-    y: y,
-    finger_count: fingerCount,
-    accx: currentMotion.accx,
-    accy: currentMotion.accy,
-    accz: currentMotion.accz,
-    rotAlpha: currentMotion.rotAlpha,
-    rotBeta: currentMotion.rotBeta,
-    rotGamma: currentMotion.rotGamma,
-    gesture_label: gestureLabel,
-    volunteer_id: null
+    x: x !== null ? x : '',
+    y: y !== null ? y : '',
+    finger_count: fingerCount !== null ? fingerCount : '',
+    accx: currentMotion.accx !== null ? currentMotion.accx : '',
+    accy: currentMotion.accy !== null ? currentMotion.accy : '',
+    accz: currentMotion.accz !== null ? currentMotion.accz : '',
+    rotAlpha: currentMotion.rotAlpha !== null ? currentMotion.rotAlpha : '',
+    rotBeta: currentMotion.rotBeta !== null ? currentMotion.rotBeta : '',
+    rotGamma: currentMotion.rotGamma !== null ? currentMotion.rotGamma : '',
+    gesture_label: gestureLabel || '',
+    volunteer_id: getVolunteerId()
   });
+  updateRecordCountUI();
+}
+
+// Export CSV Function matching exact schema
+function exportCSV() {
+  if (telemetryData.length === 0) {
+    alert('No telemetry data recorded yet. Please start recording and perform gestures first.');
+    return;
+  }
+
+  updatePipelineStep(5);
+
+  const headers = ['timestamp', 'screen', 'event_type', 'x', 'y', 'finger_count', 'accx', 'accy', 'accz', 'rotAlpha', 'rotBeta', 'rotGamma', 'gesture_label', 'volunteer_id'];
+  let csvContent = headers.join(',') + '\n';
+
+  telemetryData.forEach(row => {
+    const line = headers.map(header => {
+      const val = row[header];
+      return val !== undefined && val !== null ? val : '';
+    }).join(',');
+    csvContent += line + '\n';
+  });
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `data_${getVolunteerId()}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+// Export JSON Function
+function exportJSON() {
+  if (telemetryData.length === 0) {
+    alert('No telemetry data recorded yet. Please start recording and perform gestures first.');
+    return;
+  }
+
+  updatePipelineStep(5);
+
+  const jsonContent = JSON.stringify(telemetryData, null, 2);
+  const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `data_${getVolunteerId()}.json`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
 // Motion & Orientation Sensor Listeners
@@ -265,25 +344,32 @@ function animationLoop() {
   requestAnimationFrame(animationLoop);
 }
 
-// Feed Scroll Gesture Event Detection
+// Feed Scroll Event Debounce (Container/Wheel Scrolling)
 const feedScreenEl = document.getElementById('screen-feed');
 if (feedScreenEl) {
   feedScreenEl.addEventListener('scroll', () => {
     if (!isRecording) return;
-    const st = feedScreenEl.scrollTop;
-    if (st > lastFeedScrollTop) {
-      gestureCounts.scroll_down++;
-      recordTelemetry('scroll', null, null, 1, 'scroll_down');
-    } else if (st < lastFeedScrollTop) {
-      gestureCounts.scroll_up++;
-      recordTelemetry('scroll', null, null, 1, 'scroll_up');
+    if (initialScrollTop === null) {
+      initialScrollTop = feedScreenEl.scrollTop;
     }
-    lastFeedScrollTop = st;
-    updateStatCounters();
+    clearTimeout(feedScrollTimer);
+    feedScrollTimer = setTimeout(() => {
+      const delta = feedScreenEl.scrollTop - initialScrollTop;
+      if (delta > 15) {
+        gestureCounts.scroll_down++;
+        recordTelemetry('scroll_end', null, null, 1, 'scroll_down');
+        updateStatCounters();
+      } else if (delta < -15) {
+        gestureCounts.scroll_up++;
+        recordTelemetry('scroll_end', null, null, 1, 'scroll_up');
+        updateStatCounters();
+      }
+      initialScrollTop = null;
+    }, 250);
   }, { passive: true });
 }
 
-// Zoom Mouse Wheel Event Detection
+// Zoom Mouse Wheel Event Debounce (1 stroke per wheel gesture)
 const zoomScreenEl = document.getElementById('screen-zoom');
 const zoomTarget = document.getElementById('zoom-target');
 let currentScale = 1;
@@ -292,67 +378,92 @@ if (zoomScreenEl) {
   zoomScreenEl.addEventListener('wheel', (e) => {
     if (!isRecording) return;
     e.preventDefault();
-    let label = e.deltaY < 0 ? 'zoom_in' : 'zoom_out';
-    if (label === 'zoom_in') gestureCounts.zoom_in++;
-    else gestureCounts.zoom_out++;
+    wheelDeltaSum += e.deltaY;
 
-    const factor = e.deltaY < 0 ? 1.1 : 0.9;
+    const factor = e.deltaY < 0 ? 1.05 : 0.95;
     currentScale = Math.min(Math.max(currentScale * factor, 0.5), 3);
     if (zoomTarget) zoomTarget.style.transform = `scale(${currentScale})`;
 
-    recordTelemetry('wheel', Math.round(e.clientX), Math.round(e.clientY), 1, label);
-    updateStatCounters();
+    clearTimeout(wheelZoomTimer);
+    wheelZoomTimer = setTimeout(() => {
+      if (wheelDeltaSum < -10) {
+        gestureCounts.zoom_in++;
+        recordTelemetry('zoom_end', Math.round(e.clientX), Math.round(e.clientY), 1, 'zoom_in');
+        updateStatCounters();
+      } else if (wheelDeltaSum > 10) {
+        gestureCounts.zoom_out++;
+        recordTelemetry('zoom_end', Math.round(e.clientX), Math.round(e.clientY), 1, 'zoom_out');
+        updateStatCounters();
+      }
+      wheelDeltaSum = 0;
+    }, 300);
   }, { passive: false });
 }
 
-// Touch Event Handling & Telemetry Data Collection
+// Touch Drag Event Handling (1 Gesture Count per Touch Start -> Drag -> Finger Lift)
 function handleTouchEvent(e) {
   if (!isRecording) return;
 
-  const timestamp = Date.now();
   const eventType = e.type;
   const fingerCount = e.touches ? e.touches.length : 0;
   let detectedLabel = null;
 
   if (currentScreen === 'feed') {
     if (eventType === 'touchstart' && e.touches.length > 0) {
-      lastFeedY = e.touches[0].clientY;
-    } else if (eventType === 'touchmove' && e.touches.length > 0 && lastFeedY !== null) {
-      const deltaY = e.touches[0].clientY - lastFeedY;
-      if (deltaY < -2) {
-        detectedLabel = 'scroll_down';
-        gestureCounts.scroll_down++;
-        updateStatCounters();
-      } else if (deltaY > 2) {
-        detectedLabel = 'scroll_up';
-        gestureCounts.scroll_up++;
-        updateStatCounters();
+      feedTouchStartY = e.touches[0].clientY;
+      feedTouchLastY = e.touches[0].clientY;
+    } else if (eventType === 'touchmove' && e.touches.length > 0) {
+      feedTouchLastY = e.touches[0].clientY;
+      if (feedTouchStartY !== null) {
+        const moveDelta = feedTouchLastY - feedTouchStartY;
+        detectedLabel = moveDelta < 0 ? 'scroll_down' : 'scroll_up';
       }
-      lastFeedY = e.touches[0].clientY;
     } else if (eventType === 'touchend') {
-      lastFeedY = null;
-    }
-  } else if (currentScreen === 'zoom') {
-    if (eventType === 'touchmove' && e.touches.length === 2) {
-      const currentDist = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
-      if (lastPinchDist !== null) {
-        const deltaD = currentDist - lastPinchDist;
-        if (deltaD > 2) {
-          detectedLabel = 'zoom_in';
-          gestureCounts.zoom_in++;
+      if (feedTouchStartY !== null && feedTouchLastY !== null) {
+        const totalDelta = feedTouchLastY - feedTouchStartY;
+        if (totalDelta < -15) {
+          gestureCounts.scroll_down++;
+          detectedLabel = 'scroll_down';
           updateStatCounters();
-        } else if (deltaD < -2) {
-          detectedLabel = 'zoom_out';
-          gestureCounts.zoom_out++;
+        } else if (totalDelta > 15) {
+          gestureCounts.scroll_up++;
+          detectedLabel = 'scroll_up';
           updateStatCounters();
         }
       }
-      lastPinchDist = currentDist;
+      feedTouchStartY = null;
+      feedTouchLastY = null;
+    }
+  } else if (currentScreen === 'zoom') {
+    if (eventType === 'touchstart' && e.touches.length === 2) {
+      pinchStartDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      pinchLastDist = pinchStartDist;
+    } else if (eventType === 'touchmove' && e.touches.length === 2) {
+      pinchLastDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      if (pinchStartDist !== null) {
+        detectedLabel = (pinchLastDist - pinchStartDist > 0) ? 'zoom_in' : 'zoom_out';
+      }
     } else if (eventType === 'touchend') {
-      lastPinchDist = null;
+      if (pinchStartDist !== null && pinchLastDist !== null) {
+        const distDelta = pinchLastDist - pinchStartDist;
+        if (distDelta > 15) {
+          gestureCounts.zoom_in++;
+          detectedLabel = 'zoom_in';
+          updateStatCounters();
+        } else if (distDelta < -15) {
+          gestureCounts.zoom_out++;
+          detectedLabel = 'zoom_out';
+          updateStatCounters();
+        }
+      }
+      pinchStartDist = null;
+      pinchLastDist = null;
     }
   } else if (currentScreen === 'type') {
     detectedLabel = 'typing';
@@ -363,7 +474,6 @@ function handleTouchEvent(e) {
   }
 
   const touches = e.touches.length > 0 ? e.touches : e.changedTouches;
-
   for (let i = 0; i < touches.length; i++) {
     const touch = touches[i];
     recordTelemetry(eventType, Math.round(touch.clientX), Math.round(touch.clientY), fingerCount, detectedLabel);
@@ -524,6 +634,13 @@ function drawGestureBarChart() {
     ctx.fillText(labels[i].split(' ')[0], x + barWidth / 2, height - 6);
   }
 }
+
+// Attach Export Event Listeners
+const btnExportCSV = document.getElementById('btn-export-csv');
+if (btnExportCSV) btnExportCSV.addEventListener('click', exportCSV);
+
+const btnExportJSON = document.getElementById('btn-export-json');
+if (btnExportJSON) btnExportJSON.addEventListener('click', exportJSON);
 
 // Start continuous animation loop
 requestAnimationFrame(animationLoop);

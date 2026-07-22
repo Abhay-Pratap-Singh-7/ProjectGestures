@@ -69,15 +69,15 @@
 ---
 
 ## Phase 6: Session Management & Data Export (P6 - Export)
-- [ ] **6.1 Volunteer Session Initialization**
-  - [ ] Prompt user for anonymized `volunteer_id` (e.g., `V01`, `V02`) prior to starting recording session.
-  - [ ] Enforce anonymization policy (reject real names).
-- [ ] **6.2 Schema Enforcement**
-  - [ ] Format output payload matching exact CSV header structure:
+- [x] **6.1 Volunteer Session Initialization**
+  - [x] Prompt user for anonymized `volunteer_id` (e.g., `V01`, `V02`) prior to starting recording session.
+  - [x] Enforce anonymization policy (reject real names).
+- [x] **6.2 Schema Enforcement**
+  - [x] Format output payload matching exact CSV header structure:
     `timestamp, screen, event_type, x, y, finger_count, accx, accy, accz, rotAlpha, rotBeta, rotGamma, gesture_label, volunteer_id`
-- [ ] **6.3 Export Functionality**
-  - [ ] Add **Download CSV** (`data.csv`) trigger button.
-  - [ ] Add **Download JSON** (`data.json`) trigger button.
+- [x] **6.3 Export Functionality**
+  - [x] Add **Download CSV** (`data.csv`) trigger button.
+  - [x] Add **Download JSON** (`data.json`) trigger button.
 
 ---
 
