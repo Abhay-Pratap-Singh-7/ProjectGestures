@@ -119,6 +119,16 @@
       pointer-events: auto;
     }
 
+    .btn-sensors {
+      background-color: #0284c7;
+      color: #ffffff;
+    }
+
+    .btn-sensors.granted {
+      background-color: #15803d;
+      opacity: 0.8;
+    }
+
     .active-tab-info {
       font-size: 0.8rem;
       color: #64748b;
@@ -310,6 +320,7 @@
       </div>
     </div>
     <div class="control-row">
+      <button id="btn-sensors" class="btn btn-sensors">📡 Enable Sensors</button>
       <button id="btn-start" class="btn btn-start">▶ Start Recording</button>
       <button id="btn-stop" class="btn btn-stop">■ Stop Recording</button>
     </div>
@@ -400,7 +411,18 @@
     let currentScreen = 'feed';
     let telemetryData = [];
 
+    // Motion & Orientation State
+    let currentMotion = {
+      accx: null,
+      accy: null,
+      accz: null,
+      rotAlpha: null,
+      rotBeta: null,
+      rotGamma: null
+    };
+
     // DOM Elements
+    const btnSensors = document.getElementById('btn-sensors');
     const btnStart = document.getElementById('btn-start');
     const btnStop = document.getElementById('btn-stop');
     const statusBadge = document.getElementById('status-badge');
@@ -448,7 +470,78 @@
       btnStop.classList.remove('active');
     });
 
-    // Touch Event Handling & Telemetry Data Collection (Phase 2)
+    // Motion Sensor Event Listeners registration
+    function initSensors() {
+      window.addEventListener('devicemotion', (e) => {
+        const acc = e.accelerationIncludingGravity || e.acceleration;
+        if (acc) {
+          currentMotion.accx = acc.x ? parseFloat(acc.x.toFixed(4)) : 0;
+          currentMotion.accy = acc.y ? parseFloat(acc.y.toFixed(4)) : 0;
+          currentMotion.accz = acc.z ? parseFloat(acc.z.toFixed(4)) : 0;
+        }
+
+        if (isRecording) {
+          telemetryData.push({
+            timestamp: Date.now(),
+            screen: currentScreen,
+            event_type: 'motion',
+            x: null,
+            y: null,
+            finger_count: null,
+            accx: currentMotion.accx,
+            accy: currentMotion.accy,
+            accz: currentMotion.accz,
+            rotAlpha: currentMotion.rotAlpha,
+            rotBeta: currentMotion.rotBeta,
+            rotGamma: currentMotion.rotGamma,
+            gesture_label: null,
+            volunteer_id: null
+          });
+        }
+      }, true);
+
+      window.addEventListener('deviceorientation', (e) => {
+        currentMotion.rotAlpha = e.alpha !== null ? parseFloat(e.alpha.toFixed(4)) : 0;
+        currentMotion.rotBeta = e.beta !== null ? parseFloat(e.beta.toFixed(4)) : 0;
+        currentMotion.rotGamma = e.gamma !== null ? parseFloat(e.gamma.toFixed(4)) : 0;
+      }, true);
+
+      btnSensors.classList.add('granted');
+      btnSensors.textContent = '✅ Sensors Active';
+    }
+
+    // Enable Sensors Button Handler (iOS compatibility)
+    btnSensors.addEventListener('click', async () => {
+      try {
+        if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+          const motionPermission = await DeviceMotionEvent.requestPermission();
+          let orientationPermission = 'granted';
+          if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            orientationPermission = await DeviceOrientationEvent.requestPermission();
+          }
+
+          if (motionPermission === 'granted' && orientationPermission === 'granted') {
+            initSensors();
+          } else {
+            alert('Sensor permission denied.');
+          }
+        } else {
+          // Standard browser without iOS permission requirement
+          initSensors();
+        }
+      } catch (err) {
+        console.error('Sensor permission error:', err);
+        // Fallback for desktop / standard browsers
+        initSensors();
+      }
+    });
+
+    // Auto-initialize sensors for standard browsers
+    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission !== 'function') {
+      initSensors();
+    }
+
+    // Touch Event Handling & Telemetry Data Collection (Phase 2 & 3)
     function handleTouchEvent(e) {
       if (!isRecording) return;
 
@@ -456,7 +549,6 @@
       const eventType = e.type;
       const fingerCount = e.touches ? e.touches.length : 0;
 
-      // Collect telemetry for all active touch points or fallback to primary touch
       const touches = e.touches.length > 0 ? e.touches : e.changedTouches;
 
       for (let i = 0; i < touches.length; i++) {
@@ -468,12 +560,12 @@
           x: Math.round(touch.clientX),
           y: Math.round(touch.clientY),
           finger_count: fingerCount,
-          accx: null,
-          accy: null,
-          accz: null,
-          rotAlpha: null,
-          rotBeta: null,
-          rotGamma: null,
+          accx: currentMotion.accx,
+          accy: currentMotion.accy,
+          accz: currentMotion.accz,
+          rotAlpha: currentMotion.rotAlpha,
+          rotBeta: currentMotion.rotBeta,
+          rotGamma: currentMotion.rotGamma,
           gesture_label: null,
           volunteer_id: null
         };

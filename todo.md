@@ -32,16 +32,16 @@
 ---
 
 ## Phase 3: Motion Sensor Integration & iOS Permission Handling (P3 - Motion)
-- [ ] **3.1 iOS Sensor Permission Handling**
-  - [ ] Implement an explicit **"Enable Sensors"** button.
-  - [ ] Request permission via `DeviceMotionEvent.requestPermission()` and `DeviceOrientationEvent.requestPermission()` on user click.
-  - [ ] Handle permission granted / denied states gracefully with UI feedback.
-- [ ] **3.2 Motion Event Listeners**
-  - [ ] Register `devicemotion` event listener for accelerometer telemetry (`accx`, `accy`, `accz`).
-  - [ ] Register `deviceorientation` event listener for gyroscope telemetry (`rotAlpha`, `rotBeta`, `rotGamma`).
-- [ ] **3.3 Telemetry Synchronization**
-  - [ ] Stream motion telemetry at device native rate synchronized with exact timestamps.
-  - [ ] Append sensor readings into the primary data payload array alongside touch events.
+- [x] **3.1 iOS Sensor Permission Handling**
+  - [x] Implement an explicit **"Enable Sensors"** button.
+  - [x] Request permission via `DeviceMotionEvent.requestPermission()` and `DeviceOrientationEvent.requestPermission()` on user click.
+  - [x] Handle permission granted / denied states gracefully with UI feedback.
+- [x] **3.2 Motion Event Listeners**
+  - [x] Register `devicemotion` event listener for accelerometer telemetry (`accx`, `accy`, `accz`).
+  - [x] Register `deviceorientation` event listener for gyroscope telemetry (`rotAlpha`, `rotBeta`, `rotGamma`).
+- [x] **3.3 Telemetry Synchronization**
+  - [x] Stream motion telemetry at device native rate synchronized with exact timestamps.
+  - [x] Append sensor readings into the primary data payload array alongside touch events.
 
 ---
 
