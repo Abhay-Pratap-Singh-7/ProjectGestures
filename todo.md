@@ -1,19 +1,19 @@
 # 📋 Project Gestures - Detailed Implementation TODO List
 
 ## Phase 1: Application Setup & Core Architecture (P1 - Skeleton)
-- [ ] **1.1 HTML Shell & Layout**
-  - [ ] Create `index.html` as a single, self-contained mobile web page.
-  - [ ] Configure meta viewport tags for mobile responsiveness (`width=device-width, initial-scale=1.0, user-scalable=no`).
-  - [ ] Setup responsive layout structure with modern mobile styling and large font elements.
-- [ ] **1.2 Header & Control Bar**
-  - [ ] Add Active Tab Indicator & Status Bar.
-  - [ ] Add **Start Recording** and **Stop Recording** buttons.
-  - [ ] Add recording status indicator (Recording active / stopped).
-- [ ] **1.3 Tab Navigation & Screens**
-  - [ ] Implement navigation tabs for switching between **Feed**, **Zoom**, and **Type** screens.
-  - [ ] **📱 Feed Screen**: Build a scrollable feed container with sample item cards.
-  - [ ] **🔍 Zoom Screen**: Build an image container displaying a sample high-res image optimized for multi-touch pinch gestures.
-  - [ ] **⌨️ Type Screen**: Add target sentence prompt and an interactive text input area.
+- [x] **1.1 HTML Shell & Layout**
+  - [x] Create `index.html` as a single, self-contained mobile web page.
+  - [x] Configure meta viewport tags for mobile responsiveness (`width=device-width, initial-scale=1.0, user-scalable=no`).
+  - [x] Setup responsive layout structure with modern mobile styling and large font elements.
+- [x] **1.2 Header & Control Bar**
+  - [x] Add Active Tab Indicator & Status Bar.
+  - [x] Add **Start Recording** and **Stop Recording** buttons.
+  - [x] Add recording status indicator (Recording active / stopped).
+- [x] **1.3 Tab Navigation & Screens**
+  - [x] Implement navigation tabs for switching between **Feed**, **Zoom**, and **Type** screens.
+  - [x] **📱 Feed Screen**: Build a scrollable feed container with sample item cards.
+  - [x] **🔍 Zoom Screen**: Build an image container displaying a sample high-res image optimized for multi-touch pinch gestures.
+  - [x] **⌨️ Type Screen**: Add target sentence prompt and an interactive text input area.
 
 ---
 
